@@ -1,0 +1,21 @@
+# Global gitignore. Git reads this path by default, so core.excludesFile is
+# deliberately left unset — setting it would shadow this file.
+
+.DS_Store
+.idea
+.env.*
+.werf_secret_key
+.vault_pass
+*.vault_pass
+render*
+temp/
+my_scripts/
+
+# yazi flavors
+flavors
+
+# Local Claude Code settings are never shared, on any machine.
+**/.claude/settings.local.json
+CLAUDE.md
+AGENTS.md
+.claude/*

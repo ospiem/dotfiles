@@ -1,0 +1,23 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+set -uo pipefail
+
+if command -v brew >/dev/null 2>&1 || [ -x /opt/homebrew/bin/brew ] || [ -x /usr/local/bin/brew ]; then
+    exit 0
+fi
+
+{{- if eq .profile "work" }}
+
+# Installing Homebrew needs admin rights, which a managed machine may not grant,
+# and IT may provide its own installation. Never fail the apply over it.
+echo "Homebrew is not installed. Install it manually, or ask IT:" >&2
+echo '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"' >&2
+echo "Everything else will be applied; packages will be skipped." >&2
+exit 0
+{{- else }}
+
+echo "Installing Homebrew..."
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" \
+    || echo "warn: Homebrew installation failed; packages will be skipped" >&2
+{{- end }}
+{{- end -}}

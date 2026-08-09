@@ -1,0 +1,19 @@
+# Persistent ripgrep flags, found through RIPGREP_CONFIG_PATH in .zshrc.
+# One flag per line, no shell quoting, nothing after a flag on the same line.
+#
+# Careful: this file applies to EVERY rg invocation, including the ones Neovim's
+# telescope and linters make. Keep it to behaviour that cannot break a parser —
+# no --color, --json, --vimgrep or --sort here.
+
+--smart-case
+
+# Search dotfiles as well; .gitignore is still honoured. Without --hidden a
+# dotfiles repository is mostly invisible to rg.
+--hidden
+--glob=!.git/
+--glob=!node_modules/
+--glob=!.terraform/
+
+# Keep minified lines and log dumps from flooding the terminal.
+--max-columns=200
+--max-columns-preview

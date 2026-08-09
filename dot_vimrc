@@ -1,0 +1,14 @@
+" Plain vim only (/usr/bin/vim). Neovim reads ~/.config/nvim (kickstart) and never
+" this file, so keep it to what a fallback editor needs.
+"
+" Vim stops loading defaults.vim the moment a ~/.vimrc exists, so source it
+" explicitly and override only the differences below.
+silent! source $VIMRUNTIME/defaults.vim
+
+set number
+set hlsearch
+set ignorecase          " search case insensitive...
+set smartcase           " ...unless the pattern contains upper case
+set expandtab tabstop=4 shiftwidth=4
+set splitbelow splitright
+set noswapfile nobackup

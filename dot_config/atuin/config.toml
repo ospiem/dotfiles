@@ -1,0 +1,43 @@
+# Sync off — local only
+auto_sync = false
+update_check = false
+
+# Ctrl+R: full-screen fuzzy search
+style = "full"
+search_mode = "fuzzy"
+filter_mode = "global"
+
+# Cycle filters with repeated Ctrl+R: global → directory → session
+filter_mode_shell_start = "global"
+
+# Enter pastes command into prompt for editing, not immediate execution
+enter_accept = false
+
+# Show command preview and help hints
+show_preview = true
+show_help = true
+
+# Friendlier history display
+history_format = "{time}\t{duration}\t{command}"
+
+# Filter out noise
+history_filter = [
+  "^ls$",
+  "^cd$",
+  "^pwd$",
+  "^clear$",
+  "^exit$",
+  "ll",
+  "^ ",
+]
+
+# Don't record commands in sensitive directories
+cwd_filter = [
+  "^/private",
+]
+
+# Auto-detect and mask secrets (tokens, keys, passwords)
+secrets_filter = true
+
+# Enable workspace awareness (groups history by git repo)
+workspaces = true

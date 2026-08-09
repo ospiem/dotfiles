@@ -1,0 +1,10 @@
+.DS_Store
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+
+# transient logs (e.g. from headless nvim runs)
+*.log

@@ -1,0 +1,117 @@
+{{- /* Normalise the two answers that are easy to get wrong at init time.
+       signingkey: git passes the value straight to ssh-keygen, which does NOT
+       expand `~`, so a tilde here breaks signing with "No such file".
+       workdir: git only appends `**` to a gitdir pattern that ends in `/`, so
+       without the slash the identity applies to that directory alone and not to
+       the repositories inside it. */ -}}
+{{- $signingkey := .signingkey -}}
+{{- if hasPrefix "~/" $signingkey -}}
+{{-   $signingkey = printf "%s/%s" .chezmoi.homeDir (trimPrefix "~/" $signingkey) -}}
+{{- end -}}
+{{- $workdir := .workdir -}}
+{{- if and $workdir (not (hasSuffix "/" $workdir)) -}}
+{{-   $workdir = printf "%s/" $workdir -}}
+{{- end }}
+[core]
+	pager = delta
+	attributesFile = {{ .chezmoi.homeDir }}/.config/git/attributes
+	fsmonitor = true        # builtin FSMonitor daemon; makes status fast in big repos
+	untrackedCache = true
+
+[interactive]
+	diffFilter = delta --color-only
+
+[delta]
+	navigate = true    # use n and N to move between diff sections
+	dark = true
+	line-numbers = true
+	side-by-side = false
+	hyperlinks = true  # kitty renders the paths as clickable links
+
+[merge]
+	conflictstyle = zdiff3  # like diff3 but without repeating the common lines
+
+[diff]
+	algorithm = histogram
+	colorMoved = default
+	colorMovedWS = allow-indentation-change
+
+# Structural diff on demand: `git dft` compares syntax trees instead of lines.
+# Deliberately not diff.external — difft output is for reading, not a valid patch.
+[difftool "difft"]
+	cmd = difft "$LOCAL" "$REMOTE"
+
+[alias]
+	dft = difftool --tool=difft --no-prompt
+
+[rerere]
+	enabled = true          # record conflict resolutions and replay them on the next rebase
+
+[fetch]
+	prune = true            # drop remote-tracking refs that vanished; pairs with gbdg
+
+[pull]
+	rebase = true
+
+[push]
+	autoSetupRemote = true  # `git push` works on a fresh branch without -u
+
+[rebase]
+	autoStash = true
+	autoSquash = true       # picks up `git commit --fixup`
+
+[commit]
+	verbose = true          # show the diff in the commit message editor
+
+[branch]
+	sort = -committerdate
+
+[tag]
+	sort = -version:refname
+
+[column]
+	ui = auto
+
+[init]
+	defaultBranch = main
+
+[help]
+	autocorrect = prompt
+
+[transfer]
+	fsckObjects = true      # refuse malformed objects on transfer
+
+[credential]
+	helper = osxkeychain
+
+[user]
+	name = {{ .name }}
+	email = {{ .email }}
+{{- if $signingkey }}
+	signingkey = {{ $signingkey }}
+
+# Signing is enabled only when a key was provided at `chezmoi init`. Secure
+# Enclave keys (Secretive) cannot be migrated — each machine gets its own.
+[commit]
+	gpgsign = true
+
+[tag]
+	gpgsign = true
+
+[gpg]
+	format = ssh
+
+[gpg "ssh"]
+	allowedSignersFile = {{ .chezmoi.homeDir }}/.config/git/allowed_signers
+{{- end }}
+{{- if $workdir }}
+
+# Separate identity for one directory tree. The included file is not managed by
+# chezmoi — create it by hand on the machine that needs it.
+[includeIf "gitdir:{{ $workdir }}"]
+	path = ~/.gitconfig.work
+{{- end }}
+
+# Machine-local overrides, last so they win. Not managed by chezmoi.
+[include]
+	path = ~/.gitconfig.local

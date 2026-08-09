@@ -1,0 +1,45 @@
+{{/* Machine-local answers are stored in ~/.config/chezmoi/chezmoi.toml, never in git. */}}
+{{- $profile := promptChoiceOnce . "profile" "Machine profile" (list "personal" "work") -}}
+{{- $name := promptStringOnce . "name" "Git author name" -}}
+{{- $email := promptStringOnce . "email" "Git email" -}}
+{{- $signingkey := promptStringOnce . "signingkey" "SSH signing key path (blank to disable signing)" "" -}}
+{{- $workdir := promptStringOnce . "workdir" "Directory with a separate git identity (blank for none)" "" -}}
+
+{{- /* Must stay above every section: a key after a [section] header would be
+       parsed as part of that section. Set on every profile on purpose — it is
+       what tells chezmoi that `.age` is an encryption suffix, so the target of
+       `encrypted_Brewfile.personal.age` is `Brewfile.personal` everywhere. Gate
+       it per profile and a work machine would try to apply the ciphertext under
+       its raw `.age` name, which .chezmoiignore then fails to match. */}}
+encryption = "age"
+
+[data]
+    profile = {{ $profile | quote }}
+    name = {{ $name | quote }}
+    email = {{ $email | quote }}
+    signingkey = {{ $signingkey | quote }}
+    workdir = {{ $workdir | quote }}
+
+# Readable diffs. delta is already configured for git in ~/.gitconfig, and it
+# picks the same [delta] settings up when chezmoi pipes a diff through it.
+#
+# scriptContents = false: scripts still show up as entries, but without dumping
+# their whole body on every diff. exclude = externals: plugin tarballs are pinned
+# by commit, their contents are upstream code, not something to review here.
+# Encrypted entries are deliberately NOT excluded — decrypting needs the YubiKey,
+# so use `chezmoi diff -x encrypted` when the token is not at hand.
+[diff]
+    pager = "delta"
+    scriptContents = false
+    exclude = ["externals"]
+
+# Encryption goes through the age CLI and age-plugin-yubikey: the identity file
+# holds AGE-PLUGIN-YUBIKEY stubs, the private keys never leave the token. Every
+# decryption — including the ones `chezmoi diff` and `chezmoi status` do — needs
+# the key plugged in. Use `-x encrypted` to skip those entries.
+#
+# A work machine has no encrypted files in scope (.chezmoiignore drops them), so
+# these paths may not exist there; nothing decrypts, nothing fails.
+[age]
+    identity = "{{ .chezmoi.homeDir }}/.config/age/identity"
+    recipientsFile = "{{ .chezmoi.homeDir }}/.config/age/recipients"

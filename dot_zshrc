@@ -1,0 +1,451 @@
+# =============================================================================
+# ~/.zshrc
+# Shell: zsh (no framework — bare zsh + 3 manually sourced plugins + Starship)
+#
+# Plugin locations: ~/.zsh/plugins/
+#   git clone https://github.com/zsh-users/zsh-autosuggestions
+#   git clone https://github.com/zdharma-continuum/fast-syntax-highlighting
+#   git clone https://github.com/Aloxaf/fzf-tab
+#
+# Git aliases:          ~/.zsh/git-aliases.zsh
+# Generated completions: ~/.zsh/completions   (see gen-completions below)
+#
+# Load order is load-bearing. Do not reorder sections without reading the
+# comments — compinit needs a complete fpath, fzf-tab needs compinit, atuin
+# needs to claim Ctrl+R after fzf, and Starship must hook precmd last.
+# =============================================================================
+
+# ── Homebrew ──────────────────────────────────────────────────────────────────
+# HOMEBREW_PREFIX is exported by `brew shellenv` in .zprofile (/opt/homebrew on
+# Apple Silicon, /usr/local on Intel). The fallback keeps this file usable in a
+# shell that skipped .zprofile.
+: "${HOMEBREW_PREFIX:=/opt/homebrew}"
+export HOMEBREW_NO_ANALYTICS=1      # don't send install/usage telemetry
+export HOMEBREW_NO_ENV_HINTS=1      # suppress the "hint: ..." noise after every command
+# Default manifest for `brew bundle` and `brew bundle dump`. chezmoi creates it
+# once and then leaves it alone, so this copy can be trimmed per machine where
+# policy forbids a package. Nothing installs packages automatically — run
+# `brew bundle` yourself, and `brew bundle --file=~/.config/homebrew/Brewfile.personal`
+# for the personal extras.
+export HOMEBREW_BUNDLE_FILE="$HOME/.config/homebrew/Brewfile"
+
+# ── PATH ──────────────────────────────────────────────────────────────────────
+export GOPATH="$HOME/go"
+
+# Build PATH in explicit priority order (earlier entries win on name collision):
+#   $HOMEBREW_PREFIX/sbin — Homebrew system tools (e.g. nginx, redis-server)
+#   ~/bin                 — personal scripts
+#   ~/.local/bin          — pipx-installed Python tools
+#   $GOPATH/bin           — Go-installed binaries (golangci-lint, goose, ...)
+export PATH="$HOMEBREW_PREFIX/sbin:$HOME/bin:$HOME/.local/bin:$GOPATH/bin:$PATH"
+
+# GNU userland (coreutils / gnu-sed / grep) is installed but intentionally NOT
+# placed ahead of /usr/bin: too many macOS scripts assume BSD flag behaviour.
+# Use the g-prefixed binaries explicitly (gsed, ggrep, gdate, greadlink),
+# or uncomment the block below to make GNU the default for interactive shells.
+#for _gnu in coreutils gnu-sed grep; do
+#  path=("/opt/homebrew/opt/$_gnu/libexec/gnubin" $path)
+#done
+#unset _gnu
+
+# Remove duplicate entries from PATH. zsh-specific; must come after all PATH edits.
+typeset -U path PATH fpath FPATH
+
+# ── Completion search path ────────────────────────────────────────────────────
+# Everything that adds to fpath MUST run before compinit — the completion system
+# scans fpath exactly once and ignores anything appended later.
+
+# Homebrew ships zsh completions for gh, docker, docker-compose, fd, ripgrep,
+# yazi, ykman and others into this directory.
+if [[ -d "$HOMEBREW_PREFIX/share/zsh/site-functions" ]]; then
+  fpath=("$HOMEBREW_PREFIX/share/zsh/site-functions" $fpath)
+fi
+
+# Completions generated locally by `gen-completions` (see function near the end).
+export ZSH_COMPLETIONS="$HOME/.zsh/completions"
+[[ -d "$ZSH_COMPLETIONS" ]] && fpath=("$ZSH_COMPLETIONS" $fpath)
+
+# ── History ───────────────────────────────────────────────────────────────────
+# atuin (SQLite) is the primary history store; this file is a fallback and the
+# import source for atuin. Keeping it at 10M entries costs startup time and a
+# re-read on every prompt under SHARE_HISTORY, so it is deliberately bounded.
+HISTFILE="$HOME/.zsh_history"
+HISTSIZE=200000   # entries kept in memory
+SAVEHIST=100000   # entries written to disk (must be < HISTSIZE, see below)
+
+setopt BANG_HIST              # Treat '!' specially during expansion (e.g. !! for last command)
+setopt EXTENDED_HISTORY       # Save each command with timestamp and duration
+setopt SHARE_HISTORY          # Share history across sessions; implies INC_APPEND_HISTORY
+setopt HIST_EXPIRE_DUPS_FIRST # Drop duplicates first when trimming — needs HISTSIZE > SAVEHIST
+setopt HIST_IGNORE_ALL_DUPS   # A new command deletes any older identical entry
+setopt HIST_FIND_NO_DUPS      # Don't show duplicates when navigating history
+setopt HIST_IGNORE_SPACE      # Leading space keeps a command out of history (secrets)
+setopt HIST_SAVE_NO_DUPS      # Don't write duplicate entries to the file
+setopt HIST_REDUCE_BLANKS     # Strip superfluous whitespace before saving
+setopt HIST_VERIFY            # Show the expansion of !! / !$ before running it
+
+# ── Shell options ─────────────────────────────────────────────────────────────
+setopt EXTENDED_GLOB          # ^, ~, (#i), and the (#q...) glob-qualifier syntax used below
+setopt INTERACTIVE_COMMENTS   # allow '# comment' on the interactive command line
+setopt AUTO_PUSHD             # every cd pushes onto the directory stack (cd -1 .. cd -9)
+setopt PUSHD_IGNORE_DUPS      # no duplicate entries in that stack
+setopt PUSHD_SILENT           # don't print the stack after every cd
+setopt NO_BEEP
+unsetopt FLOW_CONTROL         # free Ctrl+S / Ctrl+Q (zsh-native replacement for `stty -ixon`)
+
+# ── LS_COLORS ─────────────────────────────────────────────────────────────────
+# eza does not export LS_COLORS (that is a GNU ls + dircolors variable), so the
+# completion list-colors zstyle below has nothing to read unless we generate it.
+# `vivid generate` costs ~15 ms, so the result is cached to disk and re-read with
+# $(<file) — a zsh builtin read, no fork.
+#
+# The theme here is only a FALLBACK for when the cache is missing and
+# `switch-theme` has not run. 'ansi' derives colours from the terminal's own
+# 16-colour palette, so it is correct whatever theme kitty currently has —
+# unlike a hardcoded name, which would silently resurrect an old theme.
+#
+# To change themes, use:  switch-theme <name>
+_ls_colors_cache="$HOME/.zsh/cache/ls_colors"
+if [[ -s "$_ls_colors_cache" ]]; then
+  export LS_COLORS="$(<$_ls_colors_cache)"
+elif (( $+commands[vivid] )); then
+  mkdir -p "${_ls_colors_cache:h}"          # :h = dirname modifier
+  vivid generate ansi > "$_ls_colors_cache"
+  export LS_COLORS="$(<$_ls_colors_cache)"
+fi
+unset _ls_colors_cache
+
+# ── Completion ────────────────────────────────────────────────────────────────
+autoload -Uz compinit
+
+# Rebuild the completion cache only once per day for faster startup.
+# Glob qualifiers: N = no error if nothing matches, . = regular files only,
+# mh+24 = modified more than 24 hours ago.
+if [[ -n $HOME/.zcompdump(#qN.mh+24) ]]; then
+  compinit -i        # full rebuild; -i skips insecure dirs silently instead of prompting
+else
+  compinit -C -i     # fast path: reuse the existing dump without re-checking functions
+fi
+
+zstyle ':completion:*' menu no                            # fzf-tab draws its own menu
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'    # case-insensitive completion
+zstyle ':completion:*:descriptions' format '[%d]'         # category labels (required by fzf-tab)
+zstyle ':completion:*' use-cache on                       # cache expensive completions
+zstyle ':completion:*' cache-path "$HOME/.zsh/cache"
+zstyle ':completion:*' special-dirs true                  # offer ./ and ../ explicitly
+
+# Colourise completion entries using LS_COLORS (generated by vivid above).
+# (s.:.) splits the colon-separated string into an array, which is what the
+# zstyle expects. Expanded when this line runs — LS_COLORS must already be set.
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+
+# ── Key bindings ──────────────────────────────────────────────────────────────
+# emacs-style line editing:
+#   Ctrl+A → start of line   Ctrl+E → end of line
+#   Ctrl+W → delete word     Ctrl+U → delete to start
+#   Ctrl+K → delete to end   Ctrl+L → clear screen
+bindkey -e
+
+# Word boundary for Option+F / Option+B: stop at '/', '-', '.' so paths and
+# hyphenated words are navigated segment by segment.
+#   my-app-server  → my | app | server
+#   ~/projects/repo → ~ | projects | repo
+WORDCHARS='*?_.[]~=&;!#$%^(){}<>'
+
+# Option+Shift+F / Option+Shift+B: jump over full words (ignore hyphens/dots).
+forward-word-full()  { local WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'; zle forward-word; }
+backward-word-full() { local WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'; zle backward-word; }
+zle -N forward-word-full
+zle -N backward-word-full
+bindkey '^[F' forward-word-full    # Option+Shift+F
+bindkey '^[B' backward-word-full   # Option+Shift+B
+
+# ── Plugins ───────────────────────────────────────────────────────────────────
+# Load order matters:
+#   1. fzf-tab                  — before autosuggestions and syntax highlighting
+#   2. zsh-autosuggestions
+#   3. fast-syntax-highlighting — last (wraps all ZLE widgets defined so far)
+
+# Bind autosuggestion widgets once at startup instead of re-checking on every
+# keystroke — a measurable prompt-latency win. Trade-off: widgets created AFTER
+# this point are not wrapped. That is fine for fzf/atuin (full-screen widgets),
+# but if suggestions ever stop updating after adding a plugin, drop this line.
+ZSH_AUTOSUGGEST_MANUAL_REBIND=1
+
+# Ghost suggestion colour. ANSI 8 (bright black) rather than hex, so it follows
+# whatever palette kitty has loaded. `switch-theme` rewrites this at the end of
+# the file if you ever want a theme-specific value.
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=8'
+
+source ~/.zsh/plugins/fzf-tab/fzf-tab.plugin.zsh
+source ~/.zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+source ~/.zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
+
+# Accept one path segment at a time with Option+F instead of the whole suggestion.
+# Read at first precmd, so setting it after sourcing the plugin is correct.
+ZSH_AUTOSUGGEST_PARTIAL_ACCEPT_WIDGETS+=(forward-word forward-word-full)
+
+# fzf-tab preview: directories via eza (tree view), files via bat (syntax highlight).
+# $realpath is the full path of the currently highlighted completion item.
+zstyle ':fzf-tab:complete:cd:*' fzf-preview \
+  'eza -1 --icons --color=always $realpath'
+zstyle ':fzf-tab:complete:*' fzf-preview \
+  '[[ -d $realpath ]] && eza -1 --icons --color=always $realpath \
+   || bat --color=always --style=plain $realpath 2>/dev/null'
+zstyle ':fzf-tab:*' switch-group '<' '>'   # move between completion groups with < and >
+
+# ── fzf ───────────────────────────────────────────────────────────────────────
+# Official integration method as of fzf 0.48+ (replaces sourcing /usr/share/fzf/*).
+source <(fzf --zsh)
+
+# File search widget on Ctrl+F. Ctrl+T is restored to transpose-chars rather
+# than left unbound.
+bindkey '^F' fzf-file-widget
+bindkey '^T' transpose-chars
+
+# fzf-git: interactive pickers for git objects, all under the Ctrl+G prefix —
+# Ctrl+G Ctrl+B branches, Ctrl+F files, Ctrl+H hashes, Ctrl+T tags,
+# Ctrl+S stashes, Ctrl+R remotes. Installed by .chezmoiexternal.toml; must load
+# after the fzf integration above.
+[[ -f ~/.zsh/plugins/fzf-git.sh/fzf-git.sh ]] && source ~/.zsh/plugins/fzf-git.sh/fzf-git.sh
+
+# fd instead of find: faster, respects .gitignore, includes hidden files
+export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"                          # source for the Ctrl+F widget
+export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'   # source for Alt+C dir jump
+
+# ANSI colour NUMBERS rather than hex, so fzf follows whatever palette kitty has
+# loaded and needs no per-theme edits:
+#   0-7 normal, 8-15 bright.  7 fg, 15 bright fg, 8 dim, 5 magenta, 2 green,
+#   3 yellow, 6 cyan, 1 red.
+# `bg` is deliberately NOT set: giving fzf a background colour makes it paint an
+# opaque rectangle, which kills kitty's window transparency inside the fzf area.
+export FZF_DEFAULT_OPTS="
+  --height 50%
+  --layout=reverse
+  --border rounded
+  --color 'fg:7,fg+:15,hl:5,hl+:5'
+  --color 'bg+:8,border:8,header:8,info:3'
+  --color 'prompt:2,pointer:6,marker:1,spinner:3'
+  --bind 'ctrl-/:toggle-preview'
+"
+
+export FZF_CTRL_T_OPTS="
+  --preview '([[ -d {} ]] && eza --tree --color=always {} || bat --color=always --style=plain {}) 2>/dev/null'
+  --preview-window=right:55%
+"
+
+export FZF_ALT_C_OPTS="
+  --preview 'eza --tree --color=always {}'
+  --preview-window=right:55%
+"
+
+# ── Editor / pager ────────────────────────────────────────────────────────────
+export VISUAL=nvim
+export EDITOR="$VISUAL"
+
+export PAGER=less
+# -R keep ANSI colours, -F quit if output fits one screen, -i smart-case search
+export LESS='-RFi'
+
+# bat as the man pager. MANROFFOPT=-c makes groff emit the overstrike sequences
+# that `col -bx` knows how to strip; without it bold/underline breaks on newer groff.
+export MANROFFOPT='-c'
+export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+
+# Fallback only — `switch-theme` overrides this at the end of the file.
+# 'ansi' makes bat use the terminal's own 16 colours, so it is correct whatever
+# theme kitty currently has. A hardcoded name here would fight the theme file.
+export BAT_THEME='ansi'
+
+# ripgrep reads persistent flags from this file. A missing path is not ignored —
+# rg prints an error on every invocation — so the file is managed by chezmoi.
+export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/ripgreprc"
+
+# ── Go ────────────────────────────────────────────────────────────────────────
+export GOBIN="$GOPATH/bin"
+# Public proxy first, fall back to direct VCS fetch if the module is not there.
+export GOPROXY='https://proxy.golang.org,direct'
+export GOSUMDB='sum.golang.org'
+# Modules that must bypass the proxy and checksum DB (internal repos):
+#export GOPRIVATE='gitlab.example.com/*,github.com/example-internal/*'
+# Pin the toolchain to whatever `go` is installed instead of auto-downloading
+# a newer one on demand — useful on restricted networks.
+#export GOTOOLCHAIN=local
+
+# ── Git aliases ───────────────────────────────────────────────────────────────
+# ~30 aliases and functions live in a separate file for clarity.
+source ~/.zsh/git-aliases.zsh
+
+# Package manifest helpers: bic (add to core), bip (add to personal, encrypted),
+# baudit (reconcile installed packages against both manifests).
+source ~/.zsh/brew.zsh
+
+# ── Aliases ───────────────────────────────────────────────────────────────────
+alias ll="eza -lAh --icons=always --smart-group --git"   # long listing with icons + git status
+alias lt="eza --tree --level=2 --icons --git-ignore"     # shallow tree, respects .gitignore
+alias grep='grep --color=auto'
+
+# bat as a plain pager-less cat when you actually want highlighting
+alias batp='bat --style=plain --paging=never'
+
+# Docker / Colima
+alias dc='docker compose'
+alias dps="docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'"
+
+# Disk usage: dua interactive is a much faster ncdu
+alias duai='dua interactive'
+
+# kitty kittens — only meaningful inside kitty, harmless elsewhere
+alias icat='kitten icat'        # render an image inline in the terminal
+alias kdiff='kitten diff'       # side-by-side diff with image support
+alias kthemes='kitten themes'   # interactive theme picker
+
+# Keep the Brewfile in sync with what is actually installed.
+# --describe adds the comment lines above each entry; --force overwrites.
+alias brewdump='brew bundle dump --force --describe'
+
+# hwatch as a colour-aware, diff-highlighting `watch`
+#alias watch='hwatch --color --differences'
+
+# ── Functions ─────────────────────────────────────────────────────────────────
+
+# kitten ssh: copies kitty's terminfo and shell integration to the remote host,
+# which fixes `'xterm-kitty': unknown terminal type`. Defined as a function, not
+# an alias, so that it is visible inside other functions (fssh) regardless of
+# definition order — aliases are expanded at parse time, functions at call time.
+# The -t tests fall back to plain ssh when stdin/stdout is not a terminal, so
+# pipelines like `infocmp -a xterm-kitty | ssh host '...'` keep working.
+unalias ssh 2>/dev/null
+ssh() {
+  if [[ "$TERM" == "xterm-kitty" && -t 0 && -t 1 ]]; then
+    kitten ssh "$@"
+  else
+    command ssh "$@"
+  fi
+}
+
+# fssh: fuzzy-pick a host from ~/.ssh/config and connect.
+# The awk loop handles multi-alias lines (`Host web-01 web-02 web-03`), which a
+# plain `awk '{print $2}'` would silently truncate to the first name.
+# Preview prints the whole config block via an awk address range (Host line →
+# first blank line) instead of a fixed `-A 10` window.
+fssh() {
+  local host
+  host=$(awk '/^[Hh]ost / && $0 !~ /\*/ { for (i = 2; i <= NF; i++) print $i }' ~/.ssh/config \
+    | sort -u \
+    | fzf \
+        --height 40% \
+        --layout=reverse \
+        --border \
+        --prompt="SSH > " \
+        --preview "awk '/^[Hh]ost .*\\<{}\\>/,/^\$/' ~/.ssh/config" \
+        --preview-window=right:50%)
+  [[ -n "$host" ]] && ssh "$host"
+}
+
+# Ctrl+X H → fuzzy SSH picker.
+# A real ZLE widget rather than `bindkey -s`: push-input stashes whatever is
+# already typed and restores it afterwards, instead of appending 'fssh' to it.
+fssh-widget() {
+  zle push-input
+  BUFFER='fssh'
+  zle accept-line
+}
+zle -N fssh-widget
+bindkey '^Xh' fssh-widget
+
+# yazi with cd-on-exit: the shell follows yazi to wherever it was when you quit.
+# Launch with 'y' instead of 'yazi'.
+y() {
+  local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+  yazi "$@" --cwd-file="$tmp"
+  if cwd="$(command cat -- "$tmp")" && [[ -n "$cwd" && "$cwd" != "$PWD" ]]; then
+    builtin cd -- "$cwd"
+  fi
+  rm -f -- "$tmp"
+}
+
+# Generate zsh completions for tools that don't ship them via Homebrew, into
+# ~/.zsh/completions (already on fpath). Run manually after upgrading them.
+gen-completions() {
+  local dir="$ZSH_COMPLETIONS"
+  mkdir -p "$dir"
+  command -v k9s            >/dev/null && k9s completion zsh            > "$dir/_k9s"
+  command -v minikube       >/dev/null && minikube completion zsh       > "$dir/_minikube"
+  command -v colima         >/dev/null && colima completion zsh         > "$dir/_colima"
+  command -v golangci-lint  >/dev/null && golangci-lint completion zsh  > "$dir/_golangci-lint"
+  command -v goose          >/dev/null && goose completion zsh          > "$dir/_goose" 2>/dev/null
+  command -v yq             >/dev/null && yq shell-completion zsh       > "$dir/_yq"
+  command -v starship       >/dev/null && starship completions zsh      > "$dir/_starship"
+  rm -f "$HOME/.zcompdump"
+  print -P "%F{green}✓%f completions regenerated — restart the shell (exec zsh)"
+}
+
+# ── Tools ─────────────────────────────────────────────────────────────────────
+# zoxide: frecency-based cd. `z <partial>` jumps, e.g. `z dotpak`.
+# Complements AUTO_PUSHD (cd -1..-9 walks chronologically, z walks by frequency).
+eval "$(zoxide init zsh)"
+
+# atuin — enhanced shell history (local SQLite, no sync).
+# Must come after fzf so that it wins the Ctrl+R binding.
+# Ctrl+R → fuzzy history search with dir / exit code / duration context.
+# Press Ctrl+R again inside the UI to cycle: global → directory → session.
+# Guarded: atuin ships in Brewfile.personal, so on a work machine Ctrl+R stays
+# the plain zsh history search instead of erroring on every shell start.
+(( $+commands[atuin] )) && eval "$(atuin init zsh --disable-up-arrow)"
+
+# ── GPG ───────────────────────────────────────────────────────────────────────
+# Tells gpg-agent which terminal to use for passphrase prompts. $TTY is a zsh
+# builtin parameter — no fork, unlike $(tty).
+export GPG_TTY="$TTY"
+
+# ── SSH auth socket ───────────────────────────────────────────────────────────
+# Secretive: hardware-backed SSH agent requiring Touch ID for every key use.
+# Keys live in the Secure Enclave and never leave the chip.
+# The -S guard (socket exists) avoids a cryptic "Error connecting to agent"
+# when Secretive isn't running — ssh falls back to on-disk keys instead.
+export SSH_AUTH_SOCK="$HOME/Library/Containers/com.maxgoedjen.Secretive.SecretAgent/Data/socket.ssh"
+[[ -S "$SSH_AUTH_SOCK" ]] || unset SSH_AUTH_SOCK
+
+# Bitwarden SSH agent (alternative — uncomment to switch)
+#export SSH_AUTH_SOCK="$HOME/Library/Containers/com.bitwarden.desktop/Data/.bitwarden-ssh-agent.sock"
+
+# SSH via the YubiKey OpenPGP applet instead of Secretive.
+# Uncomment this block AND the Secretive lines above to activate.
+# Reference: https://github.com/drduh/YubiKey-Guide#replace-agents
+#export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
+#gpgconf --launch gpg-agent
+#gpg-connect-agent updatestartuptty /bye >/dev/null
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+# Point the Docker CLI at Colima's socket instead of Docker Desktop.
+# JetBrains IDEs read DOCKER_HOST too, so this is what makes GoLand see Docker.
+# Guarded like SSH_AUTH_SOCK above: on a machine running Docker Desktop or no
+# Docker at all, an unset DOCKER_HOST is what the CLI expects.
+if [[ -S "$HOME/.colima/default/docker.sock" ]]; then
+  export DOCKER_HOST="unix://$HOME/.colima/default/docker.sock"
+fi
+
+# ── Prompt ────────────────────────────────────────────────────────────────────
+# Starship initialises last: it hooks precmd/preexec, and every tool that also
+# uses those hooks (zoxide, atuin, kitty shell integration) must load before it.
+# Guarded: starship ships in Brewfile.personal, so a machine without it falls
+# back to the default zsh prompt rather than erroring.
+(( $+commands[starship] )) && eval "$(starship init zsh)"
+
+# ── Theme ─────────────────────────────────────────────────────────────────────
+# Generated by `switch-theme <name>`. Sourced LAST on purpose: it overrides
+# BAT_THEME, FZF_DEFAULT_OPTS, ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE and the
+# FAST_HIGHLIGHT_STYLES array — the last of which only exists after the
+# fast-syntax-highlighting plugin has loaded.
+#
+# Everything above uses neutral ANSI / 'ansi' fallbacks, so the shell stays
+# coherent even if this file is missing.
+[[ -f ~/.zsh/current-theme.zsh ]] && source ~/.zsh/current-theme.zsh
+
+# ── Machine-local overrides ───────────────────────────────────────────────────
+# Not managed by chezmoi and never committed: anything true for this machine
+# only (proxies, corporate tooling, one-off PATH entries) belongs here.
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
+

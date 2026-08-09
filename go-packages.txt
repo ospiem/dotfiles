@@ -1,0 +1,2 @@
+github.com/golangci/golangci-lint/v2/cmd/golangci-lint
+github.com/ospiem/dotpak/cmd/dotpak

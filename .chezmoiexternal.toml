@@ -1,0 +1,36 @@
+# zsh plugins. .zshrc sources all three unconditionally, so without this file a
+# fresh machine gets three "no such file or directory" errors on every shell
+# start.
+#
+# Pinned to exact commits: the tarball for a given SHA never changes, so no
+# refreshPeriod is needed and every machine gets byte-identical plugins.
+# To update, bump the SHA (and the version in the comment) deliberately.
+
+# v1.3.0-1-g0983009
+[".zsh/plugins/fzf-tab"]
+    type = "archive"
+    url = "https://github.com/Aloxaf/fzf-tab/archive/0983009f8666f11e91a2ee1f88cfdb748d14f656.tar.gz"
+    exact = true
+    stripComponents = 1
+
+# v0.7.1-6-g85919cd
+[".zsh/plugins/zsh-autosuggestions"]
+    type = "archive"
+    url = "https://github.com/zsh-users/zsh-autosuggestions/archive/85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5.tar.gz"
+    exact = true
+    stripComponents = 1
+
+# v1.56-2-g3d574cc
+[".zsh/plugins/fast-syntax-highlighting"]
+    type = "archive"
+    url = "https://github.com/zdharma-continuum/fast-syntax-highlighting/archive/3d574ccf48804b10dca52625df13da5edae7f553.tar.gz"
+    exact = true
+    stripComponents = 1
+
+# fzf-git: Ctrl-G prefixed pickers for branches, files, hashes, tags, stashes.
+# 2026-08-06
+[".zsh/plugins/fzf-git.sh"]
+    type = "archive"
+    url = "https://github.com/junegunn/fzf-git.sh/archive/d5b0a5dcd1e073b8bfca45338d5dfad3e5642471.tar.gz"
+    exact = true
+    stripComponents = 1

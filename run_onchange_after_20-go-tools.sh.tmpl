@@ -1,0 +1,26 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+# re-runs whenever go-packages.txt changes
+# go-packages.txt hash: {{ include "go-packages.txt" | sha256sum }}
+set -uo pipefail
+
+if [ -x /opt/homebrew/bin/brew ]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [ -x /usr/local/bin/brew ]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+fi
+
+if ! command -v go >/dev/null 2>&1; then
+    echo "go is not installed (expected from Brewfile); skipping Go tools" >&2
+    exit 0
+fi
+
+# A proxy.golang.org that is unreachable behind a corporate network must not
+# abort the apply.
+while IFS= read -r pkg; do
+    [ -z "$pkg" ] && continue
+    case "$pkg" in \#*) continue ;; esac
+    echo "go install ${pkg}@latest"
+    go install "${pkg}@latest" || echo "warn: go install ${pkg} failed" >&2
+done < "{{ .chezmoi.sourceDir }}/go-packages.txt"
+{{- end -}}

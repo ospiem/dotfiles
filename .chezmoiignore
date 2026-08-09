@@ -1,0 +1,17 @@
+# repo-level files that must not be applied into $HOME
+README.md
+CLAUDE.md
+LICENSE
+go-packages.txt
+
+# generated locally or left over from manual edits
+.config/kitty/kitty.conf.bak
+.config/kitty/.claude
+
+# never apply stray logs into $HOME
+*.log
+{{ if ne .profile "personal" }}
+# The personal package manifest is encrypted and only belongs on personal
+# machines; a work machine has no business decrypting it.
+.config/homebrew/Brewfile.personal
+{{- end }}

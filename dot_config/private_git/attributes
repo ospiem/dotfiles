@@ -1,0 +1,47 @@
+# Global gitattributes, wired up via core.attributesFile in ~/.gitconfig.
+
+# Name the enclosing declaration in `@@` hunk headers. Drivers ship with git.
+# The win is real where definitions are indented or nested — Python shows
+# `def stop(self):` instead of `class Service:`, Markdown shows `## Section two`
+# instead of whatever line came before. For Go and shell git's default heuristic
+# already finds the top-level declaration; the entries are kept for intent.
+*.go     diff=golang
+*.rs     diff=rust
+*.py     diff=python
+*.rb     diff=ruby
+*.php    diff=php
+*.java   diff=java
+*.c      diff=cpp
+*.h      diff=cpp
+*.cpp    diff=cpp
+*.cs     diff=csharp
+*.sh     diff=bash
+*.bash   diff=bash
+*.zsh    diff=bash
+*.md     diff=markdown
+*.tex    diff=tex
+*.html   diff=html
+*.css    diff=css
+*.lua    diff=lua
+
+# Generated or lock files: keep them out of diffs, they are noise on review.
+go.sum              -diff
+*.lock              -diff
+package-lock.json   -diff
+yarn.lock           -diff
+poetry.lock         -diff
+Cargo.lock          -diff
+
+# Binary-ish payloads git should not try to diff or merge.
+*.pdf    binary
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.webp   binary
+*.ico    binary
+*.zip    binary
+*.gz     binary
+*.xz     binary
+*.7z     binary
+*.age    binary

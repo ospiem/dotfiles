@@ -1,0 +1,170 @@
+# Core manifest — installed on every machine.
+#
+# Rule of thumb for what belongs here: the dotfiles in this repository depend on
+# it, or it is a plain CLI tool that needs no account, licence or admin rights.
+# Anything tied to an Apple ID, personal hardware or a specific employer goes to
+# Brewfile.personal / Brewfile.work, which are installed by profile.
+#
+# Shell niceties that are pleasant but not required (atuin, starship) live in
+# Brewfile.personal; .zshrc initialises them only when the binary exists.
+
+# ── Shell and terminal stack ─────────────────────────────────────────────────
+# UNIX shell (command interpreter)
+brew "zsh"
+# Bourne-Again SHell, a UNIX command interpreter
+brew "bash"
+# Shell extension to navigate your filesystem faster
+brew "zoxide"
+# Command-line fuzzy finder written in Go
+brew "fzf"
+# Simple, fast and user-friendly alternative to find
+brew "fd"
+# Modern, maintained replacement for ls
+brew "eza"
+# Clone of cat(1) with syntax highlighting and Git integration
+brew "bat"
+# LS_COLORS generator; .zshrc caches its output for fzf-tab previews
+brew "vivid"
+# Blazing fast terminal file manager written in Rust, based on async I/O
+brew "yazi"
+# GNU File, Shell, and Text utilities
+brew "coreutils"
+# GNU implementation of the famous stream editor
+brew "gnu-sed"
+# GNU grep, egrep and fgrep
+brew "grep"
+
+# ── Terminal emulator and fonts (kitty.conf depends on the Nerd Font) ────────
+# GPU-based terminal emulator
+cask "kitty"
+cask "font-jetbrains-mono-nerd-font"
+cask "font-symbols-only-nerd-font"
+
+# ── yazi preview backends ────────────────────────────────────────────────────
+# Play, record, convert, and stream select audio and video codecs
+brew "ffmpeg"
+# Tools and libraries to manipulate images in select formats
+brew "imagemagick"
+# PDF rendering library (based on the xpdf-3.0 code base)
+brew "poppler"
+# SVG rendering tool and library
+brew "resvg"
+# OpenType text shaping engine
+brew "harfbuzz"
+# Perl lib for reading and writing EXIF metadata
+brew "exiftool"
+
+# ── Dotfile management ───────────────────────────────────────────────────────
+# Manage your dotfiles across multiple diverse machines, securely
+brew "chezmoi"
+
+# ── Git and editors ──────────────────────────────────────────────────────────
+# Syntax-highlighting pager for git and diff output (.gitconfig sets it as pager)
+brew "git-delta"
+# Structural diff: compares syntax trees, not lines. Wired as `git dft`
+brew "difftastic"
+# Framework for managing git pre-commit hooks (runs yamllint, hadolint, ...)
+brew "pre-commit"
+# Ambitious Vim-fork focused on extensibility and agility
+brew "neovim"
+# The `tree-sitter` binary nvim-treesitter shells out to. Mind the name: the
+# plain `tree-sitter` formula is the library and installs no executable.
+brew "tree-sitter-cli"
+# Multiplayer code editor
+cask "zed"
+
+# ── Languages and build tools ────────────────────────────────────────────────
+# Open source programming language to build simple/reliable/efficient software
+# (go-packages.txt is installed on every profile, so this belongs in the core)
+brew "go"
+# Utility for directing compilation
+brew "make"
+# Execute binaries from Python packages in isolated environments
+brew "pipx"
+# JavaScript package manager
+brew "yarn"
+
+# ── Data and text processing ─────────────────────────────────────────────────
+# Lightweight and flexible command-line JSON processor
+brew "jq"
+# Process YAML, JSON, XML, CSV and properties documents from the CLI
+brew "yq"
+# Search tool like grep and The Silver Searcher
+brew "ripgrep"
+# Linter for YAML files
+brew "yamllint"
+# Diff tool for YAML files, and sometimes JSON
+brew "dyff"
+
+# ── System and network ───────────────────────────────────────────────────────
+# OpenBSD freely-licensed SSH connectivity tools
+brew "openssh"
+# Ping, but with a graph
+brew "gping"
+# Update of iperf: measures TCP, UDP, and SCTP bandwidth
+brew "iperf3"
+# CLI wrapper for basic network utilities on macOS - ip command
+brew "iproute2mac"
+# User interface to the TELNET protocol
+brew "telnet"
+# Friendly and fast tool for sending HTTP requests
+brew "xh"
+# Command-line tool for the Amazon S3 service
+brew "s3cmd"
+# View disk space usage and delete unwanted data, fast
+brew "dua-cli"
+# Modern alternative to the watch command
+brew "hwatch"
+# Tree command, improved
+brew "tre-command"
+
+# ── Encryption ───────────────────────────────────────────────────────────────
+# Simple, modern, secure file encryption (used by dotpak backups)
+brew "age"
+# GNU Privacy Guard (OpenPGP)
+brew "gnupg"
+# Passphrase entry dialog utilizing the Assuan protocol
+brew "pinentry"
+# Pinentry for GPG on Mac
+brew "pinentry-mac"
+# Store SSH keys in the Secure Enclave; .zshrc points SSH_AUTH_SOCK at its
+# socket and unsets it when the agent is not running
+cask "secretive"
+
+# ── Desktop apps ─────────────────────────────────────────────────────────────
+# Password manager app
+cask "keepassxc"
+# Shows the next meeting in the menu bar
+cask "meetingbar"
+# Scriptable scratchpad for developers
+cask "boop"
+
+# ── Containers and Kubernetes ────────────────────────────────────────────────
+# Container runtimes on MacOS (and Linux) with minimal setup
+brew "colima"
+# Pack, ship and run any application as a lightweight container
+brew "docker"
+# Docker CLI plugin for extended build capabilities with BuildKit
+brew "docker-buildx"
+# Isolated development environments using Docker
+brew "docker-compose"
+# Tool for exploring each layer in a docker image
+brew "dive"
+# Smarter Dockerfile linter to validate best practices
+brew "hadolint"
+# Generic machine emulator and virtualizer
+brew "qemu"
+# Additional guest agents for Lima
+brew "lima-additional-guestagents"
+
+# ── Kubernetes and work tooling ──────────────────────────────────────────────
+# Merged in from the former Brewfile.work: the work-only list was three entries,
+# not worth a separate profile manifest. Trim locally where policy forbids them.
+# Kubernetes command-line tool (provides kubectl)
+brew "kubernetes-cli"
+# Kubernetes CLI To Manage Your Clusters In Style!
+brew "k9s"
+# Kubernetes package manager
+brew "helm"
+# Sync your markdown files with Confluence pages
+brew "mark"
