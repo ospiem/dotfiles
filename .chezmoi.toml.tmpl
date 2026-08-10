@@ -3,7 +3,18 @@
 {{- $name := promptStringOnce . "name" "Git author name" -}}
 {{- $email := promptStringOnce . "email" "Git email" -}}
 {{- $signingkey := promptStringOnce . "signingkey" "SSH signing key path (blank to disable signing)" "" -}}
-{{- $workdir := promptStringOnce . "workdir" "Directory with a separate git identity (blank for none)" "" -}}
+{{- $workdir := promptStringOnce . "workdir" "Directory with repositories that use a separate git identity (blank for none)" "" -}}
+{{- /* Identity for that tree. Asked only when there is one, and rendered into
+       ~/.gitconfig.extra as a bare [user] block — everything else is inherited
+       from ~/.gitconfig, which git merges the include into. */ -}}
+{{- $extraname := "" -}}
+{{- $extraemail := "" -}}
+{{- $extrasigningkey := "" -}}
+{{- if $workdir -}}
+{{-   $extraname = promptStringOnce . "extraname" "Git author name for those repositories" $name -}}
+{{-   $extraemail = promptStringOnce . "extraemail" "Git email for those repositories" -}}
+{{-   $extrasigningkey = promptStringOnce . "extrasigningkey" "SSH signing key path for those repositories (blank to reuse the main one)" "" -}}
+{{- end -}}
 
 {{- /* Must stay above every section: a key after a [section] header would be
        parsed as part of that section. Set on every profile on purpose — it is
@@ -19,6 +30,9 @@ encryption = "age"
     email = {{ $email | quote }}
     signingkey = {{ $signingkey | quote }}
     workdir = {{ $workdir | quote }}
+    extraname = {{ $extraname | quote }}
+    extraemail = {{ $extraemail | quote }}
+    extrasigningkey = {{ $extrasigningkey | quote }}
 
 # Readable diffs. delta is already configured for git in ~/.gitconfig, and it
 # picks the same [delta] settings up when chezmoi pipes a diff through it.

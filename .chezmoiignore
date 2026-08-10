@@ -10,6 +10,10 @@ go-packages.txt
 
 # never apply stray logs into $HOME
 *.log
+{{ if not .workdir }}
+# No directory with a separate identity on this machine, so nothing includes it.
+.gitconfig.extra
+{{- end }}
 {{ if ne .profile "personal" }}
 # The personal package manifest is encrypted and only belongs on personal
 # machines; a work machine has no business decrypting it.

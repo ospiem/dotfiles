@@ -274,32 +274,51 @@ export GOSUMDB='sum.golang.org'
 #export GOTOOLCHAIN=local
 
 # ── Git aliases ───────────────────────────────────────────────────────────────
-# ~30 aliases and functions live in a separate file for clarity.
-source ~/.zsh/git-aliases.zsh
+# ~45 aliases and a handful of functions live in a separate file for clarity.
+# Guarded here rather than inside the file: everything in it wraps one binary,
+# so one test at the source site beats 45 of them.
+(( $+commands[git] )) && source ~/.zsh/git-aliases.zsh
+
+# ── Kubernetes aliases ────────────────────────────────────────────────────────
+# Short forms for kubectl, plus compdef wiring so they complete like the real
+# command. Sourced after compinit on purpose — that is what fills $_comps.
+source ~/.zsh/k8s-aliases.zsh
 
 # Package manifest helpers: bic (add to core), bip (add to personal, encrypted),
 # baudit (reconcile installed packages against both manifests).
 source ~/.zsh/brew.zsh
 
 # ── Aliases ───────────────────────────────────────────────────────────────────
-alias ll="eza -lAh --icons=always --smart-group --git"   # long listing with icons + git status
-alias lt="eza --tree --level=2 --icons --git-ignore"     # shallow tree, respects .gitignore
+# Each group is guarded on the binary it wraps: a machine is free to trim
+# packages out of its Brewfile, and an alias for a tool that is not installed
+# only turns into a confusing error later. Two are deliberately unguarded:
+# `grep` is POSIX, and `brewdump` needs Homebrew, which the whole file already
+# assumes ($HOMEBREW_PREFIX above is used bare) — a guard there would only
+# suggest the config survives without it.
+if (( $+commands[eza] )); then
+  alias ll="eza -lAh --icons=always --smart-group --git"  # long listing, icons + git status
+  alias lt="eza --tree --level=2 --icons --git-ignore"    # shallow tree, respects .gitignore
+fi
 alias grep='grep --color=auto'
 
 # bat as a plain pager-less cat when you actually want highlighting
-alias batp='bat --style=plain --paging=never'
+(( $+commands[bat] )) && alias batp='bat --style=plain --paging=never'
 
 # Docker / Colima
-alias dc='docker compose'
-alias dps="docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'"
+if (( $+commands[docker] )); then
+  alias dc='docker compose'
+  alias dps="docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'"
+fi
 
 # Disk usage: dua interactive is a much faster ncdu
-alias duai='dua interactive'
+(( $+commands[dua] )) && alias duai='dua interactive'
 
 # kitty kittens — only meaningful inside kitty, harmless elsewhere
-alias icat='kitten icat'        # render an image inline in the terminal
-alias kdiff='kitten diff'       # side-by-side diff with image support
-alias kthemes='kitten themes'   # interactive theme picker
+if (( $+commands[kitten] )); then
+  alias icat='kitten icat'      # render an image inline in the terminal
+  alias kdiff='kitten diff'     # side-by-side diff with image support
+  alias kthemes='kitten themes' # interactive theme picker
+fi
 
 # Keep the Brewfile in sync with what is actually installed.
 # --describe adds the comment lines above each entry; --force overwrites.
@@ -368,16 +387,19 @@ y() {
 
 # Generate zsh completions for tools that don't ship them via Homebrew, into
 # ~/.zsh/completions (already on fpath). Run manually after upgrading them.
+#
+# Only tools Homebrew does NOT cover belong here. $ZSH_COMPLETIONS is prepended
+# to fpath *after* site-functions, so it wins: a hand-generated copy of a
+# completion that a formula already installs silently shadows the maintained one
+# and goes stale on the next upgrade. Everything installed as a brew formula
+# (kubectl, kubectx, kustomize, helm, git, yq, k9s, colima, starship, ...) ships
+# its own — check with `ls $HOMEBREW_PREFIX/share/zsh/site-functions` first.
 gen-completions() {
   local dir="$ZSH_COMPLETIONS"
   mkdir -p "$dir"
-  command -v k9s            >/dev/null && k9s completion zsh            > "$dir/_k9s"
   command -v minikube       >/dev/null && minikube completion zsh       > "$dir/_minikube"
-  command -v colima         >/dev/null && colima completion zsh         > "$dir/_colima"
   command -v golangci-lint  >/dev/null && golangci-lint completion zsh  > "$dir/_golangci-lint"
   command -v goose          >/dev/null && goose completion zsh          > "$dir/_goose" 2>/dev/null
-  command -v yq             >/dev/null && yq shell-completion zsh       > "$dir/_yq"
-  command -v starship       >/dev/null && starship completions zsh      > "$dir/_starship"
   rm -f "$HOME/.zcompdump"
   print -P "%F{green}✓%f completions regenerated — restart the shell (exec zsh)"
 }
@@ -430,8 +452,8 @@ fi
 # ── Prompt ────────────────────────────────────────────────────────────────────
 # Starship initialises last: it hooks precmd/preexec, and every tool that also
 # uses those hooks (zoxide, atuin, kitty shell integration) must load before it.
-# Guarded: starship ships in Brewfile.personal, so a machine without it falls
-# back to the default zsh prompt rather than erroring.
+# Guarded anyway: a machine that trimmed starship out of its Brewfile falls back
+# to the default zsh prompt rather than erroring on every shell start.
 (( $+commands[starship] )) && eval "$(starship init zsh)"
 
 # ── Theme ─────────────────────────────────────────────────────────────────────

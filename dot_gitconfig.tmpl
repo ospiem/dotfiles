@@ -106,10 +106,10 @@
 {{- end }}
 {{- if $workdir }}
 
-# Separate identity for one directory tree. The included file is not managed by
-# chezmoi — create it by hand on the machine that needs it.
+# Separate identity for one directory tree. ~/.gitconfig.extra is rendered from
+# the answers given at `chezmoi init` and overrides nothing but [user].
 [includeIf "gitdir:{{ $workdir }}"]
-	path = ~/.gitconfig.work
+	path = ~/.gitconfig.extra
 {{- end }}
 
 # Machine-local overrides, last so they win. Not managed by chezmoi.
