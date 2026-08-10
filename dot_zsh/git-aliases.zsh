@@ -16,72 +16,73 @@ function git_main_branch() {
 }
 
 # Status & Info
-alias gs='git status'
-alias gst='git status'
-alias gb='git branch'
-alias glo='git log --oneline --decorate'
-alias glg='git log --graph --oneline --decorate --all'
-alias gsh='git show'
-alias gbl='git blame -w -C -C -C'   # ignore whitespace, follow code moved between files
-alias gd='git diff'
-alias gds='git diff --staged'
-alias gdup='git diff @{upstream}'
-alias gdst='git diff --stat'
+alias gst='git status'                        # working tree status
+alias gb='git branch'                         # list local branches
+alias glo='git log --oneline --decorate'      # one line per commit
+alias glg='git log --graph --oneline --decorate --all'  # graph, every branch
+alias gsh='git show'                          # a commit: metadata and diff
+alias gbl='git blame -w -C -C -C'             # ignore whitespace and moved code
+alias gd='git diff'                           # unstaged changes
+alias gds='git diff --staged'                 # staged changes — the next commit
+alias gdup='git diff @{upstream}'             # what is not pushed yet
+alias gdst='git diff --stat'                  # changed files and line counts
 
 # Staging & Committing
-alias gaa='git add --all'
-alias gcmsg='git commit -m'
-alias gcsm='git commit -s -m'
-alias gcm='git checkout main 2>/dev/null || git checkout master'
+alias gaa='git add --all'                     # stage everything, deletions too
+alias gcmsg='git commit -m'                   # commit with an inline message
+alias gcsm='git commit -s -m'                 # same, with a Signed-off-by line
 
 # Checkout & Branching
-alias gco='git checkout'
-alias gcb='git checkout -b'
-alias gsw='git switch'              # switch is the modern verb for branches only
-alias gswc='git switch -c'
-alias gcp='git cherry-pick'
+# `git switch` is the modern verb for branches; gco stays for what it cannot do
+# (paths, detached HEAD, `gco <sha>`).
+alias gco='git checkout'                      # paths, revisions, detached HEAD
+alias gsw='git switch'                        # branches only, never files
+alias gswc='git switch -c'                    # create a branch and switch to it
+alias gcm='git checkout $(git_main_branch)'   # back to the default branch
+alias gcp='git cherry-pick'                   # replay a commit onto HEAD
 
 # Push & Pull
-alias gp='git push'
-alias gpsup='git push --set-upstream origin $(git symbolic-ref --short HEAD)'
-alias gpf='git push --force-with-lease'
-alias gpd='git push --dry-run'
-alias gl='git pull'
+# No gpsup: push.autoSetupRemote in ~/.gitconfig makes plain `gp` set the
+# upstream on a fresh branch.
+alias gp='git push'                           # upstream is set automatically
+alias gpf='git push --force-with-lease'       # abort if the remote moved
+alias gpd='git push --dry-run'                # what would be pushed
+alias gl='git pull'                           # rebases, per pull.rebase
 
 # Fetch & Remote
-alias gf='git fetch'
-alias gfa='git fetch --all --prune'
-alias gra='git remote add'
+alias gf='git fetch'                          # refresh origin's tracking refs
+alias gfa='git fetch --all --prune'           # all remotes, drop dead branches
+alias gra='git remote add'                    # gra <name> <url>
 
 # Rebase & Merge
-alias grb='git rebase'
-alias grbi='git rebase -i'          # rebase.autoSquash picks up fixup! commits
-alias grbc='git rebase --continue'
-alias grba='git rebase --abort'
-alias grbom='git rebase origin/$(git_main_branch)'
-alias gm='git merge'
+alias grb='git rebase'                        # replay HEAD onto <branch>
+alias grbi='git rebase -i'                    # autoSquash folds fixup! commits
+alias grbc='git rebase --continue'            # resume after fixing conflicts
+alias grba='git rebase --abort'               # restore the pre-rebase state
+alias grbom='git rebase origin/$(git_main_branch)'  # onto remote default
+alias gm='git merge'                          # merge <branch> into HEAD
 
 # Fixup workflow: stage the fix, `gcf <sha>`, then `grbi <sha>~1` — autoSquash
 # in ~/.gitconfig folds it into the right commit without editing the todo list.
-alias gcf='git commit --fixup'
-alias gundo='git reset --soft HEAD~1'   # undo the last commit, keep the changes staged
+alias gcf='git commit --fixup'                # mark a fix for <sha>
+alias gundo='git reset --soft HEAD~1'         # undo last commit, keep changes
 
 # Restore & Revert
-alias grs='git restore'
-alias grst='git restore --staged'
-alias grev='git revert'
+alias grs='git restore'                       # discard unstaged changes
+alias grst='git restore --staged'             # unstage, keep the changes
+alias grev='git revert'                       # new commit that undoes <sha>
 
 # Stash
-alias gsta='git stash push'
-alias gstp='git stash pop'
-alias gstd='git stash drop'
-alias gsts='git stash show --text'
-alias gstl='git stash list'
+alias gsta='git stash push'                   # stash the working tree
+alias gstp='git stash pop'                    # apply newest stash and drop it
+alias gstd='git stash drop'                   # discard a stash unapplied
+alias gsts='git stash show --text'            # full diff of a stash
+alias gstl='git stash list'                   # list stashes
 
 # Branch delete
-alias gbd='git branch -d'
-alias gbD='git branch -D'
-alias gbv='git branch -vv'          # shows upstream and [gone] markers
+alias gbd='git branch -d'                     # delete a merged branch
+alias gbD='git branch -D'                     # delete even if unmerged
+alias gbv='git branch -vv'                    # upstream and [gone] markers
 
 # Delete local branches already merged into the default branch.
 #   gbda        delete
@@ -180,7 +181,7 @@ function gbdg() {
 }
 
 # Clone
-alias gcl='git clone'
+alias gcl='git clone'                         # clone into ./<repo>
 
 function gccd() {
   git clone --recurse-submodules "$@" \

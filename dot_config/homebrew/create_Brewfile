@@ -5,7 +5,7 @@
 # Anything tied to an Apple ID, personal hardware or a specific employer goes to
 # Brewfile.personal / Brewfile.work, which are installed by profile.
 #
-# Shell niceties that are pleasant but not required (atuin, starship) live in
+# Shell niceties that are pleasant but not required (atuin) live in
 # Brewfile.personal; .zshrc initialises them only when the binary exists.
 
 # ── Shell and terminal stack ─────────────────────────────────────────────────
@@ -33,6 +33,8 @@ brew "coreutils"
 brew "gnu-sed"
 # GNU grep, egrep and fgrep
 brew "grep"
+# Cross-shell prompt for astronauts (.zshrc still guards the init)
+brew "starship"
 
 # ── Terminal emulator and fonts (kitty.conf depends on the Nerd Font) ────────
 # GPU-based terminal emulator
@@ -59,6 +61,9 @@ brew "exiftool"
 brew "chezmoi"
 
 # ── Git and editors ──────────────────────────────────────────────────────────
+# Distributed revision control system (newer than the Xcode CLT build, and the
+# one `git config --global` in .gitconfig is written for)
+brew "git"
 # Syntax-highlighting pager for git and diff output (.gitconfig sets it as pager)
 brew "git-delta"
 # Structural diff: compares syntax trees, not lines. Wired as `git dft`
@@ -70,8 +75,6 @@ brew "neovim"
 # The `tree-sitter` binary nvim-treesitter shells out to. Mind the name: the
 # plain `tree-sitter` formula is the library and installs no executable.
 brew "tree-sitter-cli"
-# Multiplayer code editor
-cask "zed"
 
 # ── Languages and build tools ────────────────────────────────────────────────
 # Open source programming language to build simple/reliable/efficient software
@@ -95,6 +98,12 @@ brew "ripgrep"
 brew "yamllint"
 # Diff tool for YAML files, and sometimes JSON
 brew "dyff"
+
+# ── Documents ────────────────────────────────────────────────────────────────
+# Swiss-army knife of markup format conversion
+brew "pandoc"
+# Graph visualization software from AT&T and Bell Labs
+brew "graphviz"
 
 # ── System and network ───────────────────────────────────────────────────────
 # OpenBSD freely-licensed SSH connectivity tools
@@ -121,6 +130,10 @@ brew "tre-command"
 # ── Encryption ───────────────────────────────────────────────────────────────
 # Simple, modern, secure file encryption (used by dotpak backups)
 brew "age"
+# Plugin for encrypting files with age and PIV tokens such as YubiKeys.
+# Required by the [age] block in ~/.config/chezmoi/chezmoi.toml, which is
+# rendered on every profile — without it `chezmoi apply` cannot decrypt at all.
+brew "age-plugin-yubikey"
 # GNU Privacy Guard (OpenPGP)
 brew "gnupg"
 # Passphrase entry dialog utilizing the Assuan protocol
@@ -138,6 +151,8 @@ cask "keepassxc"
 cask "meetingbar"
 # Scriptable scratchpad for developers
 cask "boop"
+# Plain-text editor for web pages, program source codes and more
+cask "coteditor"
 
 # ── Containers and Kubernetes ────────────────────────────────────────────────
 # Container runtimes on MacOS (and Linux) with minimal setup
@@ -162,6 +177,13 @@ brew "lima-additional-guestagents"
 # not worth a separate profile manifest. Trim locally where policy forbids them.
 # Kubernetes command-line tool (provides kubectl)
 brew "kubernetes-cli"
+# Tool that can switch between kubectl contexts easily and create aliases
+# (also provides kubens; .zshrc aliases both as kctx / kns)
+brew "kubectx"
+# OpenID Connect authentication plugin for kubectl (`kubectl oidc-login`)
+brew "kubelogin"
+# Template-free customization of Kubernetes YAML manifests
+brew "kustomize"
 # Kubernetes CLI To Manage Your Clusters In Style!
 brew "k9s"
 # Kubernetes package manager
