@@ -1,0 +1,28 @@
+{{- /* Included from ~/.gitconfig for every repository under .workdir. git merges
+       an include into the surrounding config and the last value wins, so only
+       the keys that differ belong here — pager, delta, aliases and the rest stay
+       inherited. Same tilde caveat as in the main config: git hands signingkey
+       to ssh-keygen, which does not expand `~`. */ -}}
+{{- $signingkey := .extrasigningkey -}}
+{{- if hasPrefix "~/" $signingkey -}}
+{{-   $signingkey = printf "%s/%s" .chezmoi.homeDir (trimPrefix "~/" $signingkey) -}}
+{{- end -}}
+[user]
+	name = {{ .extraname }}
+	email = {{ .extraemail }}
+{{- if $signingkey }}
+	signingkey = {{ $signingkey }}
+{{- end }}
+{{- if and $signingkey (not .signingkey) }}
+
+# The main config enables signing only when it has a key of its own. It has
+# none, so this tree turns signing on for itself.
+[commit]
+	gpgsign = true
+
+[tag]
+	gpgsign = true
+
+[gpg]
+	format = ssh
+{{- end }}

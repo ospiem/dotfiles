@@ -24,8 +24,14 @@ Three layers, from most to least shared:
 1. **This repository** — everything that should be identical everywhere.
 2. **Profile branches** — `{{ if eq .profile "work" }}` inside templates, plus
    the encrypted `Brewfile.personal`.
-3. **Local files, never committed** — `~/.zshrc.local`, `~/.gitconfig.local`, and `~/.gitconfig.work` for the optional
-   second identity. Sourced last, so they win over everything above.
+3. **Local files, never committed** — `~/.zshrc.local` and `~/.gitconfig.local`.
+   Sourced last, so they win over everything above.
+
+The optional second git identity is not one of them: answer the `workdir` prompt
+with the directory holding those repositories and chezmoi renders
+`~/.gitconfig.extra` from the name, email and signing key it asks for next. git
+merges it into `~/.gitconfig` for that tree only, and it carries nothing but
+`[user]` — pager, aliases and the rest stay inherited.
 
 ## Bootstrap a new machine
 

@@ -102,6 +102,11 @@ sensitive = [
     ".ai",
     # Shell history databases
     ".local/share/atuin",   # atuin SQLite history (history.db + WAL files)
+    # chezmoi prompt answers: both git identities, emails and signing key paths.
+    # The single file, not the directory — chezmoistate.boltdb next to it is run
+    # state that chezmoi rebuilds. Restoring it brings ~/.gitconfig.extra back,
+    # since that file is rendered from these answers.
+    ".config/chezmoi/chezmoi.toml",
 ]
 
 [backup]
