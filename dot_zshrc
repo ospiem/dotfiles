@@ -146,11 +146,12 @@ zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
 #   Ctrl+K → delete to end   Ctrl+L → clear screen
 bindkey -e
 
-# Word boundary for Option+F / Option+B: stop at '/', '-', '.' so paths and
-# hyphenated words are navigated segment by segment.
+# Word boundary for Option+F / Option+B: stop at '/', '-', '.', '=' so paths,
+# hyphenated words and assignments are navigated segment by segment.
 #   my-app-server  → my | app | server
 #   ~/projects/repo → ~ | projects | repo
-WORDCHARS='*?_.[]~=&;!#$%^(){}<>'
+#   KEY=value      → KEY | value
+WORDCHARS='*?_.[]~&;!#$%^(){}<>'
 
 # Option+Shift+F / Option+Shift+B: jump over full words (ignore hyphens/dots).
 forward-word-full()  { local WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'; zle forward-word; }
