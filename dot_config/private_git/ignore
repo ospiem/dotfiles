@@ -19,5 +19,5 @@ flavors
 CLAUDE.md
 AGENTS.md
 .claude/*
+**/.claude/.cc-writes/
 plans
-
