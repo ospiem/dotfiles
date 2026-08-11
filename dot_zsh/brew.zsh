@@ -7,9 +7,23 @@
 # The only decision when adding a package is "would a work machine need this
 # too?" — yes goes to the core manifest, no goes to the personal one.
 #
-# All three functions work on the SOURCE files inside the chezmoi repository, not
-# on the copies in $HOME: the core copy carries the create_ attribute, so chezmoi
-# never syncs it back and editing it would only change this machine.
+# bic and bip write to the SOURCE files inside the chezmoi repository, not to the
+# copies in $HOME: the core copy carries the create_ attribute, so chezmoi never
+# syncs it back and editing it would only change this machine.
+#
+# baudit reads the opposite way — the copies in $HOME. The personal manifest is
+# age-encrypted at the source, so reading it there costs a YubiKey PIN on every
+# run; `chezmoi apply` already wrote a decrypted copy, so the PIN is paid once,
+# at apply time. This also makes the report describe THIS machine: the core copy
+# is allowed to drift from the source (a work machine may drop packages its
+# policy forbids), and it is the drifted copy that says what should be installed
+# here.
+#
+# The price of that split: a package recorded by bic lands in the source only,
+# and baudit calls it untracked until the core copy is refreshed. `apply` will
+# not do it — create_ means chezmoi writes that file once and never again — so
+# the refresh is `rm ~/.config/homebrew/Brewfile && chezmoi apply`, which also
+# discards whatever this machine had trimmed.
 
 function _brew_manifest_src() {
     command chezmoi source-path "$HOME/.config/homebrew/$1" 2>/dev/null
@@ -66,31 +80,28 @@ function _baudit_step_done() {
 # installs, not packages pulled in as dependencies — plus `brew list --cask` and
 # `mas list`.
 function baudit() {
-    local core pers tmp have_personal=1
-    core=$(_brew_manifest_src Brewfile) || return 1
-    pers=$(_brew_manifest_src Brewfile.personal)
+    local tmp core="$HOME/.config/homebrew/Brewfile" pers="$HOME/.config/homebrew/Brewfile.personal"
+    local -a manifests
+
+    [[ -f $core ]] || { print -u2 "baudit: no $core — run chezmoi apply"; return 1 }
+    manifests=("$core")
+
+    # An absent personal manifest is normal on a work machine, where
+    # .chezmoiignore drops it — but on a personal one it means the apply has not
+    # happened yet, and staying quiet would report its packages as untracked.
+    # `chezmoi source-path` tells the two apart without touching the ciphertext.
+    if [[ -f $pers ]]; then
+        manifests+=("$pers")
+    elif command chezmoi source-path "$pers" &>/dev/null; then
+        print -u2 "baudit: $pers is managed but missing — run chezmoi apply, or its packages look untracked"
+    fi
+
     tmp=$(mktemp -d "${TMPDIR:-/tmp}/baudit.XXXXXX") || return 1
     chmod 700 "$tmp"
 
-    # stderr is deliberately NOT redirected here, and this notice is a permanent
-    # line rather than a transient one: age-plugin-yubikey prints "Enter PIN for
-    # YubiKey" on stderr and reads the PIN from the terminal, so swallowing stderr
-    # turns a PIN prompt into a silent "not decrypted", and erasing the line would
-    # eat the prompt with it.
-    if [[ -n $pers ]]; then
-        [[ -t 2 ]] && print -Pu2 '%F{242}… decrypting the personal manifest — the YubiKey wants its PIN%f'
-        command chezmoi decrypt "$pers" > "$tmp/pers" || have_personal=0
-    else
-        have_personal=0
-    fi
-    if (( ! have_personal )); then
-        : > "$tmp/pers"
-        print -u2 "baudit: personal manifest not decrypted — its packages will look untracked"
-    fi
-
     _baudit_step 'listing installed formulae and casks'
-    grep -hE '^brew ' "$core" "$tmp/pers" | sed -E 's/^brew "([^"]+)".*/\1/' | sort -u > "$tmp/want_brew"
-    grep -hE '^cask ' "$core" "$tmp/pers" | sed -E 's/^cask "([^"]+)".*/\1/' | sort -u > "$tmp/want_cask"
+    grep -hE '^brew ' "${manifests[@]}" | sed -E 's/^brew "([^"]+)".*/\1/' | sort -u > "$tmp/want_brew"
+    grep -hE '^cask ' "${manifests[@]}" | sed -E 's/^cask "([^"]+)".*/\1/' | sort -u > "$tmp/want_cask"
     command brew leaves --installed-on-request | sort > "$tmp/have_brew"
     command brew list --cask 2>/dev/null | sort > "$tmp/have_cask"
 
@@ -101,7 +112,7 @@ function baudit() {
     : > "$tmp/extra_mas"
     if (( $+commands[mas] )); then
         _baudit_step 'listing App Store apps'
-        grep -hE '^mas ' "$core" "$tmp/pers" | sed -E 's/.*id: *([0-9]+).*/\1/' | sort -u > "$tmp/want_mas"
+        grep -hE '^mas ' "${manifests[@]}" | sed -E 's/.*id: *([0-9]+).*/\1/' | sort -u > "$tmp/want_mas"
         # The tracked ids go in as one comma-delimited string, not as a second awk
         # input file: with an empty want list `NR == FNR` holds for every line of
         # `mas list` as well, and the comparison silently prints nothing at all.
@@ -120,12 +131,12 @@ function baudit() {
     # version check re-resolves every cask and calls `mas outdated`, both
     # network-bound: that is what made this take minutes instead of a second.
     local -x HOMEBREW_NO_AUTO_UPDATE=1
-    _baudit_step 'checking the core manifest against what is installed'
-    command brew bundle check --no-upgrade --verbose --file="$core" 2>&1 | grep '^→' > "$tmp/missing"
-    if (( have_personal )); then
-        _baudit_step 'checking the personal manifest against what is installed'
-        command brew bundle check --no-upgrade --verbose --file="$tmp/pers" 2>&1 | grep '^→' >> "$tmp/missing"
-    fi
+    local m
+    : > "$tmp/missing"
+    for m in "${manifests[@]}"; do
+        _baudit_step "checking ${m:t} against what is installed"
+        command brew bundle check --no-upgrade --verbose --file="$m" 2>&1 | grep '^→' >> "$tmp/missing"
+    done
     _baudit_step_done
 
     print -P '%F{yellow}installed but in no manifest%f'
