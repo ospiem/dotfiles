@@ -321,9 +321,9 @@ if (( $+commands[kitten] )); then
   alias kthemes='kitten themes' # interactive theme picker
 fi
 
-# Keep the Brewfile in sync with what is actually installed.
-# --describe adds the comment lines above each entry; --force overwrites.
-alias brewdump='brew bundle dump --force --describe'
+# Keep the Brewfile in sync with what is actually installed. --force
+# overwrites; descriptions are on by default (Homebrew 7 rejects --describe).
+alias brewdump='brew bundle dump --force'
 
 # hwatch as a colour-aware, diff-highlighting `watch`
 #alias watch='hwatch --color --differences'

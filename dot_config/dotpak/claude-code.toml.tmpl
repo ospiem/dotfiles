@@ -1,0 +1,53 @@
+# Full ~/.claude snapshot for machine-loss recovery.
+# Separate from config.toml so the ~/.claude excludes stay anchored to .claude/
+# paths. Scheduled by ~/Library/LaunchAgents/dev.ospiem.dotpak.claude-code.plist
+# (also managed by chezmoi; `dotpak cron` uses a fixed label and would replace
+# the main job).
+items = []
+
+# Encrypted: transcripts and history may contain pasted secrets.
+sensitive = [".claude"]
+
+[backup]
+{{- if eq .profile "personal" }}
+backup_dir = "{{ .chezmoi.homeDir }}/Library/Mobile Documents/com~apple~CloudDocs/backups/claude-code"
+{{- else }}
+backup_dir = "{{ .chezmoi.homeDir }}/backups/claude-code"
+{{- end }}
+max_backups = 7
+encryption = "age"
+age_recipients = "~/.config/age/cron-recipient.txt"
+age_identity_files = ["~/.config/age/identity"]
+
+[excludes]
+patterns = [
+    # regenerated or re-downloaded by Claude Code
+    ".claude/cache",
+    ".claude/paste-cache",
+    ".claude/shell-snapshots",
+    ".claude/session-env",
+    ".claude/sessions",
+    ".claude/telemetry",
+    ".claude/debug",
+    ".claude/statsig",
+    ".claude/ide",
+    ".claude/daemon",
+    ".claude/bridge-spawn",
+    ".claude/chrome",
+    ".claude/jobs",
+    ".claude/downloads",
+    ".claude/security",
+    ".claude/file-history",
+    ".claude/plugins/cache",
+    ".claude/plugins/marketplaces",
+    ".claude/plugins/repos",
+    ".claude/plugins/.trash",
+    ".claude/plugins/synced",
+    ".claude/statusline-last-input.json",
+    ".claude/skills/synced",
+    # transient everywhere
+    ".DS_Store",
+    "*.lock",
+    "*.sock",
+    "node_modules",
+]

@@ -1,0 +1,10 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+# (Re)loads the ~/.claude backup job whenever its plist changes; launchd keeps
+# running the old definition otherwise.
+# plist hash: {{ include "private_Library/LaunchAgents/dev.ospiem.dotpak.claude-code.plist.tmpl" | sha256sum }}
+set -uo pipefail
+plist="$HOME/Library/LaunchAgents/dev.ospiem.dotpak.claude-code.plist"
+launchctl unload "$plist" 2>/dev/null || true
+launchctl load "$plist" || echo "warn: launchctl load failed (try: launchctl load $plist)" >&2
+{{- end -}}
