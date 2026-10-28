@@ -1,0 +1,16 @@
+.idea
+.werf_secret_key
+render*
+.env.*
+.DS_Store
+CLAUDE.md
+AGENTS.md
+.claude/*
+#yazi flavors
+flavors
+jgit
+plans/
+temp/
+my_scripts/
+.vault_pass
+*.vault_pass

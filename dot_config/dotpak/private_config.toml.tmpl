@@ -1,74 +1,15 @@
 # Dotpak configuration file
 # See https://github.com/ospiem/dotpak for documentation
+#
+# Content only. Everything chezmoi manages comes back with `chezmoi apply`, so
+# it is deliberately absent here: a restore must never overwrite a rendered
+# dotfile with a stale copy. Raycast extensions, zsh plugins and caches are
+# re-downloaded or regenerated and are not worth 200 MB per day either.
 
-# Items to backup
+# Items to backup (plaintext-safe, not in the dotfiles repo, not regenerable)
 items = [
-    # Shell
-    ".zshrc",
-    ".bashrc",
-    ".profile",
-    ".zprofile",
-    ".bash_profile",
-    ".zsh",
-    ".zshenv",
-    ".oh-my-zsh/custom",
-    ".config/fish",
-    ".p10k.zsh",
-    # Git
-    ".gitconfig",
-    ".gitignore_global",
-    ".config/git",
-    # Editors
-    ".vimrc",
-    ".config/nvim",
-    ".emacs",
-    ".emacs.d",
-    ".config/helix",
-    # Terminal
-    ".tmux.conf",
-    ".config/alacritty",
-    ".config/kitty",
-    ".config/wezterm",
-    ".config/starship.toml",
-    ".config/zellij",
-    # macOS
-    ".config/raycast",
-    # Node.js
-    ".npmrc",
-    ".nvmrc",
-    ".yarnrc",
-    ".config/yarn",
-    ".bunfig.toml",
-    # Python
-    ".config/pip",
-    ".config/ruff",
-    ".config/mypy",
-    ".condarc",
-    ".jupyter",
-    # Ruby
-    ".gemrc",
-    ".irbrc",
-    ".pryrc",
-    # Java
-    ".gradle",
-    ".m2/settings.xml",
-    # Rust
-    ".cargo/config.toml",
-    ".rustup/settings.toml",
-    # Go
-    ".config/go",
-    # DevOps
-    ".ansible",
-    ".ansible.cfg",
-    ".config/podman",
-    # AI tools (settings)
-    ".claude/settings.json",
-    ".claude/projects",
     ".codex/config.toml",
     ".codex/skills",
-    # Shell plugins and aliases (bare zsh setup, no framework)
-    ".zsh",                       # git-aliases.zsh + plugins directory
-    ".config/atuin/config.toml",  # atuin config (no sync, local only)
 ]
 
 # Sensitive items (only backed up with encryption)
@@ -95,7 +36,7 @@ sensitive = [
     ".zsh_history",
     ".bash_history",
     ".lesshst",
-    # AI tools (auth/tokens)
+    # AI tools (auth/tokens); ~/.claude has its own job, see claude-code.toml
     ".claude.json",
     ".codex/auth.json",
     ".ai",
@@ -103,8 +44,8 @@ sensitive = [
     ".local/share/atuin",   # atuin SQLite history (history.db + WAL files)
     # chezmoi prompt answers: both git identities, emails and signing key paths.
     # The single file, not the directory — chezmoistate.boltdb next to it is run
-    # state that chezmoi rebuilds. Restoring it brings ~/.gitconfig.extra back,
-    # since that file is rendered from these answers.
+    # state that chezmoi rebuilds. Restore this BEFORE `chezmoi init`: with the
+    # answers in place, init asks nothing and renders ~/.gitconfig.extra.
     ".config/chezmoi/chezmoi.toml",
 ]
 
@@ -123,16 +64,17 @@ max_backups = 14
 # Encryption: "age" | "gpg" | "none"
 encryption = "age"
 
-# Path to age recipients file (for age encryption)
+# Recipients: the cron key plus every YubiKey, so an archive opens with the
+# YubiKey identity below (two touches per restore: scan, then extract) or with
+# the cron key once ~/.config/age/cron-identity.txt.age is decrypted.
 age_recipients = "~/.config/age/cron-recipient.txt"
 
-# Path to age identity files (for age decryption)
-age_identity_files = ["~/.config/age/identity"]  # required for decrypting age backups
+# Identity for decryption: YubiKey stubs, regenerated on a new machine with
+# `age-plugin-yubikey --identity > ~/.config/age/identity`.
+age_identity_files = ["~/.config/age/identity"]
 
-# GPG recipient (for GPG encryption)
-# gpg_recipient = "your@email.com"
-
-# Exclude patterns
+# Exclude patterns. Never add generic dev patterns like *.md or *.sh here: they
+# match every path component and would gut .codex/skills.
 [excludes]
 patterns = [
     # General
@@ -144,39 +86,12 @@ patterns = [
     ".DS_Store",
     "*.sock",
     "*.cache",
-    # CI/CD and dev artifacts
-    ".circleci",
-    ".github",
-    ".travis.yml",
-    ".gitlab-ci.yml",
-    "Makefile",
-    "Dockerfile",
-    "*.md",
-    "LICENSE*",
-    "COPYING*",
-    "Gemfile*",
-    "*.spec",
-    "*.rb",
-    "test",
-    "tests",
-    "spec",
-    ".editorconfig",
-    ".gitignore",
-    ".gitattributes",
-    ".rspec",
-    ".rubocop*",
-    ".ruby-version",
-    # Python
+    # Python / Node artifacts inside skills
     "*.pyc",
     "__pycache__",
     ".venv",
     "venv",
-    # Node
     "node_modules",
-    # Java/Gradle/Maven
-    ".gradle/caches",
-    ".gradle/daemon",
-    ".m2/repository",
     # Terraform
     "*.tfstate",
     "*.tfstate.*",
@@ -193,35 +108,6 @@ patterns = [
     "known_hosts.old",
     # Zsh compiled
     "*.zwc",
-    # Emacs
-    "*~",
-    "#*#",
-    ".emacs.d/elpa",
-    ".emacs.d/eln-cache",
-    # Vim/Neovim
-    ".config/nvim/lazy-lock.json",
-    # Ruby version managers (large)
-    ".rbenv/versions",
-    ".rvm/gems",
-    ".rvm/rubies",
-    # oh-my-zsh cloned plugins artifacts
-    "gitstatus/src",
-    "gitstatus/deps",
-    "gitstatus/usrbin",
-    "*.png",
-    "*.gif",
-    "*.jpg",
-    "*.svg",
-    "test-data",
-    "docs",
-    # Misc dev files
-    "*.sh",
-    "DESCRIPTION",
-    "URL",
-    "VERSION",
-    "ZSH_VERSIONS",
-    ".revision-hash",
-    ".version",
 ]
 
 # Named profiles

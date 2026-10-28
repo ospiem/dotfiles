@@ -19,3 +19,6 @@ go-packages.txt
 # machines; a work machine has no business decrypting it.
 .config/homebrew/Brewfile.personal
 {{- end }}
+{{ if ne .chezmoi.os "darwin" }}
+Library
+{{- end }}
